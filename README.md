@@ -1,13 +1,13 @@
 # 🧾 TaxWise: AI Tax Assistant  
 
 ## 👥 Team Details  
-**Team Name:** <Your Team Name>  
+**Team Name:** StrawHats
 
 **Members:**  
-- **Member 1** – Frontend Developer  
-- **Member 2** – Backend Developer  
-- **Member 3** – AI/ML Developer  
-- **Member 4** – DevOps & Integrations  
+- **Chris Fernandes** 
+- **John Jacob Philji** 
+- **Santo Xavier** 
+- **Armaan Syed** 
 
 ---
 
@@ -69,9 +69,3 @@ Filing taxes and managing personal finances in India is often **time-consuming, 
 
 ---
 
-## ⚙️ Setup Instructions  
-
-### **1. Clone the Repository**
-```bash
-git clone https://github.com/<your-team-name>/taxwise.git
-cd taxwise
