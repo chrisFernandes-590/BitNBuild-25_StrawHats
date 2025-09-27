@@ -1,0 +1,22 @@
+date,description,amount,type
+2024-04-01,	Monthly Salary Credit,150000.00,CREDIT
+2024-05-01,	Monthly Salary Credit,150000.00,CREDIT
+2024-06-01,	Monthly Salary Credit,150000.00,CREDIT
+2024-07-01,	Monthly Salary Credit,150000.00,CREDIT
+2024-08-01,	Monthly Salary Credit,150000.00,CREDIT
+2024-09-01,	Monthly Salary Credit,150000.00,CREDIT
+2024-10-01,	Monthly Salary Credit,150000.00,CREDIT
+2024-11-01,	Monthly Salary Credit,150000.00,CREDIT
+2024-12-01,	Monthly Salary Credit,150000.00,CREDIT
+2025-01-01,	Monthly Salary Credit,150000.00,CREDIT
+2025-02-01,	Monthly Salary Credit,150000.00,CREDIT
+2025-03-01,	Monthly Salary Credit,150000.00,CREDIT
+2024-05-20,	PPF Investment,50000.00,DEBIT
+2024-07-30,	LIC Premium Payment,40000.00,DEBIT
+2024-08-15,	Home Loan Principal Repayment,60000.00,DEBIT
+2025-03-25,	ELSS Mutual Fund Purchase,15000.00,DEBIT
+2024-04-30,	Home Loan Interest Payment,180000.00,DEBIT
+2024-09-01,	Health Insurance Premium - Self & Family,20000.00,DEBIT
+2025-01-10,	Mediclaim for Senior Citizen Parents,40000.00,DEBIT
+2024-06-10,	Furniture Purchase,30000.00,DEBIT
+2025-02-15,	Vacation Expense,50000.00,DEBIT
