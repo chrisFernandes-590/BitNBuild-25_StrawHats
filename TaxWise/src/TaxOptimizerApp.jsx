@@ -1,38 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
-// --- 1. SIMULATED DUMMY DATA (Equivalent to dummy_data.csv) ---
-// Note: In a real app, this data would come from the FastAPI endpoint.
-const DUMMY_TRANSACTIONS = [
-    { date: '2024-04-01', description: 'Monthly Salary Credit', amount: 80000.00, type: 'CREDIT' },
-    { date: '2024-05-01', description: 'Monthly Salary Credit', amount: 80000.00, type: 'CREDIT' },
-    { date: '2024-06-01', description: 'Monthly Salary Credit', amount: 80000.00, type: 'CREDIT' },
-    { date: '2024-07-01', description: 'Monthly Salary Credit', amount: 80000.00, type: 'CREDIT' },
-    { date: '2024-08-01', description: 'Monthly Salary Credit', amount: 80000.00, type: 'CREDIT' },
-    { date: '2024-09-01', description: 'Monthly Salary Credit', amount: 80000.00, type: 'CREDIT' },
-    { date: '2024-10-01', description: 'Monthly Salary Credit', amount: 80000.00, type: 'CREDIT' },
-    { date: '2024-11-01', description: 'Monthly Salary Credit', amount: 80000.00, type: 'CREDIT' },
-    { date: '2024-12-01', description: 'Monthly Salary Credit', amount: 80000.00, type: 'CREDIT' },
-    { date: '2025-01-01', description: 'Monthly Salary Credit', amount: 80000.00, type: 'CREDIT' },
-    { date: '2025-02-01', description: 'Monthly Salary Credit', amount: 80000.00, type: 'CREDIT' },
-    { date: '2025-03-01', description: 'Monthly Salary Credit', amount: 80000.00, type: 'CREDIT' },
-    
-    // Deductions (DEBIT transactions)
-    { date: '2024-04-30', description: 'LIC Premium Payment', amount: -20000.00, type: 'DEBIT' }, // 80C
-    { date: '2024-05-30', description: 'Health Insurance Payment - Family', amount: -5000.00, type: 'DEBIT' }, // 80D
-    { date: '2024-06-30', description: 'PPF Investment', amount: -10000.00, type: 'DEBIT' }, // 80C
-    { date: '2024-07-30', description: 'HDFC Home Loan Principal Repayment', amount: -15000.00, type: 'DEBIT' }, // 80C
-    { date: '2024-07-30', description: 'HDFC Home Loan Interest Payment', amount: -20000.00, type: 'DEBIT' }, // 24B
-    { date: '2025-03-25', description: 'ELSS Mutual Fund Purchase', amount: -30000.00, type: 'DEBIT' }, // 80C
-    { date: '2025-03-28', description: 'Additional Health Insurance', amount: -15000.00, type: 'DEBIT' }, // 80D
-];
-
-// --- 2. SIMULATED TAX ENGINE LOGIC (Equivalent to tax_engine.py) ---
+// --- 1. SIMULATED TAX ENGINE LOGIC (Equivalent to tax_engine.py) ---
 
 /**
  * Calculates tax liability under the Old Regime (India, simplified).
  * Standard Deduction: ₹50,000 (included by default).
  * 80C limit: ₹1,50,000
- * 80D limit: ₹25,000 (self/family) + ₹50,000 (parents > 60) -> Simplified to ₹50,000 max here.
+ * 80D limit: ₹50,000 max (Simplified)
  * 24B limit: ₹2,00,000
  */
 const calculateOldRegimeTax = (grossIncome, deductions) => {
@@ -85,14 +59,6 @@ const calculateNewRegimeTax = (grossIncome) => {
     let tax = 0;
 
     // New Regime Slabs (Simplified and Consolidated)
-    // Up to ₹3,00,000: Nil
-    // ₹3,00,001 to ₹6,00,000: 5%
-    // ₹6,00,001 to ₹9,00,000: 10%
-    // ₹9,00,001 to ₹12,00,000: 15%
-    // ₹12,00,001 to ₹15,00,000: 20%
-    // Above ₹15,00,000: 30%
-
-    // Calculate tax based on progressive slabs
     if (taxableIncome > 1500000) {
         tax += (taxableIncome - 1500000) * 0.30;
         tax += 150000; // Tax on 15,00,000
@@ -156,7 +122,42 @@ const computeTaxOptimization = (grossIncome, deductions) => {
     };
 };
 
-// --- 3. DATA INGESTION AND PROCESSING (Equivalent to ingest_and_process_data) ---
+// --- 2. DATA INGESTION AND PROCESSING (Equivalent to ingest_and_process_data) ---
+
+// CSV parsing function: Converts CSV string to the required transaction array.
+const parseCSV = (csvText) => {
+    const lines = csvText.trim().split('\n');
+    if (lines.length < 2) return []; // No header and no data
+    
+    // Assuming the header is: date,description,amount,type
+    const headers = lines[0].toLowerCase().split(',').map(h => h.trim());
+    const transactions = [];
+
+    // Find indices for expected columns
+    const dateIndex = headers.indexOf('date');
+    const descIndex = headers.indexOf('description');
+    const amountIndex = headers.indexOf('amount');
+    const typeIndex = headers.indexOf('type');
+
+    if (dateIndex === -1 || descIndex === -1 || amountIndex === -1 || typeIndex === -1) {
+        throw new Error("CSV file must contain 'date', 'description', 'amount', and 'type' columns.");
+    }
+
+    for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim());
+        if (values.length !== headers.length) continue; // Skip malformed rows
+        
+        transactions.push({
+            date: values[dateIndex],
+            description: values[descIndex],
+            amount: parseFloat(values[amountIndex]),
+            type: values[typeIndex].toUpperCase(),
+        });
+    }
+
+    return transactions;
+};
+
 
 const processFinancialData = (transactions) => {
     let grossIncome = 0;
@@ -190,7 +191,7 @@ const processFinancialData = (transactions) => {
     return { grossIncome, deductions };
 };
 
-// --- 4. REACT COMPONENT FOR FRONTEND DISPLAY ---
+// --- 3. REACT COMPONENT FOR FRONTEND DISPLAY ---
 
 const formatter = new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -206,38 +207,95 @@ const StatCard = ({ title, value, colorClass }) => (
     </div>
 );
 
-const App = () => {
-    const [data, setData] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
+// New component for the upload area
+const UploadArea = ({ onDataProcessed, onError, isLoading }) => {
+    const handleFileUpload = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
 
-    // Run the data processing and optimization logic on mount
-    useEffect(() => {
-        // Simulate API delay
-        setTimeout(() => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
             try {
-                // 1. Ingest and Process Data
-                const { grossIncome, deductions } = processFinancialData(DUMMY_TRANSACTIONS);
+                const csvText = e.target.result;
+                const transactions = parseCSV(csvText);
+
+                if (transactions.length === 0) {
+                    onError("No valid transactions found in the file.");
+                    return;
+                }
+                
+                // Process and compute optimization
+                const { grossIncome, deductions } = processFinancialData(transactions);
                 
                 if (grossIncome === 0) {
-                    throw new Error("Gross income is zero. Cannot perform optimization.");
+                    onError("Gross income is zero. Cannot perform optimization.");
+                    return;
                 }
 
-                // 2. Compute Optimization
                 const results = computeTaxOptimization(grossIncome, deductions);
+                onDataProcessed({ ...results, deductions });
 
-                setData({ ...results, deductions });
             } catch (error) {
-                console.error("Error computing tax optimization:", error);
-                setData({ status: 'error', message: error.message || 'An unknown error occurred during computation.' });
-            } finally {
-                setIsLoading(false);
+                console.error("File processing error:", error);
+                onError(error.message || 'An unknown error occurred during computation.');
             }
+        };
+
+        reader.readAsText(file);
+    };
+
+    return (
+        <div className="p-6 mb-8 bg-white rounded-xl shadow-lg border border-dashed border-gray-300 hover:border-blue-500 transition duration-200">
+            <label htmlFor="csv-upload" className="block text-center cursor-pointer">
+                <p className="text-xl font-semibold text-gray-700">Upload Financial CSV File</p>
+                <p className="text-sm text-gray-500 mt-1">Expected columns: `date, description, amount, type`</p>
+                <input 
+                    id="csv-upload" 
+                    type="file" 
+                    accept=".csv" 
+                    onChange={handleFileUpload} 
+                    className="hidden"
+                    disabled={isLoading}
+                />
+                <button 
+                    onClick={() => document.getElementById('csv-upload').click()}
+                    className={`mt-4 px-6 py-2 rounded-lg font-bold text-white transition duration-300 ${
+                        isLoading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                    disabled={isLoading}
+                >
+                    {isLoading ? 'Processing...' : 'Choose CSV File'}
+                </button>
+            </label>
+        </div>
+    );
+};
+
+
+const App = () => {
+    const [data, setData] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    // Function to handle data from the UploadArea
+    const handleDataProcessed = useCallback((results) => {
+        setIsLoading(true);
+        setError(null);
+        setTimeout(() => { // Simulate API calculation time
+            setData(results);
+            setIsLoading(false);
         }, 500);
+    }, []);
+
+    const handleError = useCallback((message) => {
+        setIsLoading(false);
+        setData(null);
+        setError(message);
     }, []);
 
     // Memoize formatted results
     const formattedResults = useMemo(() => {
-        if (!data || data.status === 'error') return null;
+        if (!data) return null;
 
         const rec = data.Recommendation;
         const oldRegime = data.Old_Regime;
@@ -266,31 +324,32 @@ const App = () => {
         );
     }
     
-    if (data && data.status === 'error') {
+    // Display general error or file processing error
+    if (error) {
         return (
             <div className="p-6 max-w-lg mx-auto bg-red-100 border-l-4 border-red-500 rounded-lg shadow-md mt-10">
                 <h2 className="text-xl font-bold text-red-700 mb-2">Calculation Error</h2>
-                <p className="text-red-600">{data.message}</p>
+                <p className="text-red-600">{error}</p>
                 <p className="mt-3 text-sm text-red-500">
-                    Please ensure the transaction data is correctly structured.
+                    Please upload a valid CSV file with the required columns.
                 </p>
+                <button 
+                    onClick={() => { setError(null); setData(null); }}
+                    className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                    Try Again
+                </button>
             </div>
         );
     }
 
-    if (!formattedResults) {
-        return <p className="text-center mt-10 text-gray-500">No data available after processing.</p>;
-    }
-
-
-    const recommendationColor = formattedResults.recommendedRegime.includes("Old") 
+    const recommendationColor = formattedResults?.recommendedRegime.includes("Old") 
         ? "bg-purple-100 text-purple-800" 
         : "bg-green-100 text-green-800";
 
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-8 font-inter">
-            {/* The script tag was removed here! */}
             <style>{`
                 .font-inter { font-family: 'Inter', sans-serif; }
                 .tax-advice { transition: all 0.3s ease; }
@@ -302,94 +361,105 @@ const App = () => {
             </header>
 
             <main className="max-w-6xl mx-auto">
-                {/* Recommendation Banner */}
-                <div className={`p-6 mb-8 rounded-2xl shadow-xl border-t-8 ${formattedResults.recommendedRegime.includes("Old") ? 'border-purple-500 bg-white' : 'border-green-500 bg-white'}`}>
-                    <h2 className="text-xl font-bold text-gray-800">Your Personalized Recommendation</h2>
-                    <p className={`mt-2 inline-block px-3 py-1 rounded-full font-semibold text-lg ${recommendationColor}`}>
-                        {formattedResults.recommendedRegime}
-                    </p>
-                    <div className="flex flex-col md:flex-row justify-between items-center mt-4 border-t pt-4">
-                        <div className="flex flex-col items-start">
-                             <p className="text-sm text-gray-500">Estimated Final Tax Liability:</p>
-                            <p className="text-4xl font-black text-gray-900 mt-1">{formattedResults.taxLiability}</p>
-                        </div>
-                        <div className="text-right mt-4 md:mt-0">
-                            <p className="text-lg text-gray-700 font-medium">Potential Savings</p>
-                            <p className="text-3xl font-extrabold text-blue-600">{formattedResults.savingsPotential}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Key Metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <StatCard 
-                        title="Annual Gross Income" 
-                        value={formattedResults.grossIncome} 
-                        colorClass="bg-blue-50 text-blue-800 border-b-4 border-blue-500" 
-                    />
-                    <StatCard 
-                        title="Total Deductions Claimed (Old)" 
-                        value={formattedResults.totalDeductionsClaimed} 
-                        colorClass="bg-yellow-50 text-yellow-800 border-b-4 border-yellow-500" 
-                    />
-                     <StatCard 
-                        title="Tax Advice" 
-                        value="Read Below" 
-                        colorClass="bg-indigo-50 text-indigo-800 border-b-4 border-indigo-500" 
-                    />
-                </div>
+                <UploadArea 
+                    onDataProcessed={handleDataProcessed} 
+                    onError={handleError}
+                    isLoading={isLoading}
+                />
                 
-                {/* Detailed Comparison & Advice */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    
-                    {/* Comparison Table */}
-                    <div className="bg-white p-6 rounded-2xl shadow-xl">
-                        <h3 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Regime Comparison</h3>
-                        <table className="min-w-full text-left text-sm font-medium">
-                            <tbody>
-                                <tr className="border-b transition duration-300 ease-in-out hover:bg-gray-50">
-                                    <td className="px-3 py-3 text-lg font-semibold text-gray-700">Old Regime Tax</td>
-                                    <td className="px-3 py-3 text-lg font-bold text-red-600">{formattedResults.oldTax}</td>
-                                </tr>
-                                <tr className="border-b transition duration-300 ease-in-out hover:bg-gray-50">
-                                    <td className="px-3 py-3 text-lg font-semibold text-gray-700">New Regime Tax</td>
-                                    <td className="px-3 py-3 text-lg font-bold text-green-600">{formattedResults.newTax}</td>
-                                </tr>
-                                <tr className="transition duration-300 ease-in-out bg-blue-50 font-extrabold">
-                                    <td className="px-3 py-3 text-lg text-blue-700">Best Case Scenario</td>
-                                    <td className="px-3 py-3 text-lg text-blue-700">{formattedResults.taxLiability}</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                {/* Only render results if data is available */}
+                {formattedResults && (
+                    <>
+                        {/* Recommendation Banner */}
+                        <div className={`p-6 mb-8 rounded-2xl shadow-xl border-t-8 ${formattedResults.recommendedRegime.includes("Old") ? 'border-purple-500 bg-white' : 'border-green-500 bg-white'}`}>
+                            <h2 className="text-xl font-bold text-gray-800">Your Personalized Recommendation</h2>
+                            <p className={`mt-2 inline-block px-3 py-1 rounded-full font-semibold text-lg ${recommendationColor}`}>
+                                {formattedResults.recommendedRegime}
+                            </p>
+                            <div className="flex flex-col md:flex-row justify-between items-center mt-4 border-t pt-4">
+                                <div className="flex flex-col items-start">
+                                    <p className="text-sm text-gray-500">Estimated Final Tax Liability:</p>
+                                    <p className="text-4xl font-black text-gray-900 mt-1">{formattedResults.taxLiability}</p>
+                                </div>
+                                <div className="text-right mt-4 md:mt-0">
+                                    <p className="text-lg text-gray-700 font-medium">Potential Savings</p>
+                                    <p className="text-3xl font-extrabold text-blue-600">{formattedResults.savingsPotential}</p>
+                                </div>
+                            </div>
+                        </div>
 
-                        <h4 className="text-lg font-bold text-gray-800 mt-6 mb-3">Deductions Breakdown</h4>
-                        <ul className="space-y-1 text-gray-700">
-                            {Object.entries(formattedResults.deductionsBreakdown).map(([key, value]) => (
-                                <li key={key} className="flex justify-between text-sm py-1 border-b border-dashed">
-                                    <span className="font-medium text-gray-600">Section {key} Total:</span>
-                                    <span className="font-semibold">{formatter.format(value)}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+                        {/* Key Metrics */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <StatCard 
+                                title="Annual Gross Income" 
+                                value={formattedResults.grossIncome} 
+                                colorClass="bg-blue-50 text-blue-800 border-b-4 border-blue-500" 
+                            />
+                            <StatCard 
+                                title="Total Deductions Claimed (Old)" 
+                                value={formattedResults.totalDeductionsClaimed} 
+                                colorClass="bg-yellow-50 text-yellow-800 border-b-4 border-yellow-500" 
+                            />
+                            <StatCard 
+                                title="Tax Advice" 
+                                value="Read Below" 
+                                colorClass="bg-indigo-50 text-indigo-800 border-b-4 border-indigo-500" 
+                            />
+                        </div>
+                        
+                        {/* Detailed Comparison & Advice */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            
+                            {/* Comparison Table */}
+                            <div className="bg-white p-6 rounded-2xl shadow-xl">
+                                <h3 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Regime Comparison</h3>
+                                <table className="min-w-full text-left text-sm font-medium">
+                                    <tbody>
+                                        <tr className="border-b transition duration-300 ease-in-out hover:bg-gray-50">
+                                            <td className="px-3 py-3 text-lg font-semibold text-gray-700">Old Regime Tax</td>
+                                            <td className="px-3 py-3 text-lg font-bold text-red-600">{formattedResults.oldTax}</td>
+                                        </tr>
+                                        <tr className="border-b transition duration-300 ease-in-out hover:bg-gray-50">
+                                            <td className="px-3 py-3 text-lg font-semibold text-gray-700">New Regime Tax</td>
+                                            <td className="px-3 py-3 text-lg font-bold text-green-600">{formattedResults.newTax}</td>
+                                        </tr>
+                                        <tr className="transition duration-300 ease-in-out bg-blue-50 font-extrabold">
+                                            <td className="px-3 py-3 text-lg text-blue-700">Best Case Scenario</td>
+                                            <td className="px-3 py-3 text-lg text-blue-700">{formattedResults.taxLiability}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
 
-                    {/* Investment Advice */}
-                    <div className="bg-white p-6 rounded-2xl shadow-xl tax-advice">
-                        <h3 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Investment Strategy</h3>
-                        <p className="text-gray-700 leading-relaxed">
-                           {formattedResults.advice}
-                        </p>
-                        <ul className="mt-4 space-y-2 text-sm text-gray-600 list-disc list-inside">
-                            <li>Check your remaining investment capacity for 80C (max ₹1.5 Lakh).</li>
-                            <li>Ensure all Health Insurance premiums are accounted for under 80D.</li>
-                        </ul>
-                    </div>
+                                <h4 className="text-lg font-bold text-gray-800 mt-6 mb-3">Deductions Breakdown</h4>
+                                <ul className="space-y-1 text-gray-700">
+                                    {Object.entries(formattedResults.deductionsBreakdown).map(([key, value]) => (
+                                        <li key={key} className="flex justify-between text-sm py-1 border-b border-dashed">
+                                            <span className="font-medium text-gray-600">Section {key} Total:</span>
+                                            <span className="font-semibold">{formatter.format(value)}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
 
-                </div>
+                            {/* Investment Advice */}
+                            <div className="bg-white p-6 rounded-2xl shadow-xl tax-advice">
+                                <h3 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Investment Strategy</h3>
+                                <p className="text-gray-700 leading-relaxed">
+                                    {formattedResults.advice}
+                                </p>
+                                <ul className="mt-4 space-y-2 text-sm text-gray-600 list-disc list-inside">
+                                    <li>Check your remaining investment capacity for 80C (max ₹1.5 Lakh).</li>
+                                    <li>Ensure all Health Insurance premiums are accounted for under 80D.</li>
+                                </ul>
+                            </div>
+
+                        </div>
+                    </>
+                )}
             </main>
             
             <footer className="text-center mt-10 py-4 text-gray-500 text-sm">
-                Data used is a dummy representation of 12 months of salary and various deductions.
+                Please note: This calculation is for illustrative purposes only. Consult a tax professional for final filing.
             </footer>
         </div>
     );
