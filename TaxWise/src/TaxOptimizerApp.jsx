@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import CibilAdvisorApp from './CibilAdvisor';
 
 // --- 1. SIMULATED TAX ENGINE LOGIC (Equivalent to tax_engine.py) ---
 
