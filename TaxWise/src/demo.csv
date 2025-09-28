@@ -1,0 +1,25 @@
+date,description,amount,type
+2024-04-01,Monthly Salary Credit,85000.00,CREDIT
+2024-05-01,Monthly Salary Credit,85000.00,CREDIT
+2024-06-01,Monthly Salary Credit,85000.00,CREDIT
+2024-07-01,Monthly Salary Credit,85000.00,CREDIT
+2024-08-01,Monthly Salary Credit,85000.00,CREDIT
+2024-09-01,Monthly Salary Credit,85000.00,CREDIT
+2024-10-01,Monthly Salary Credit,85000.00,CREDIT
+2024-11-01,Monthly Salary Credit,85000.00,CREDIT
+2024-12-01,Monthly Salary Credit,85000.00,CREDIT
+2025-01-01,Monthly Salary Credit,85000.00,CREDIT
+2025-02-01,Monthly Salary Credit,85000.00,CREDIT
+2025-03-01,Monthly Salary Credit,85000.00,CREDIT
+2024-04-15,Life Insurance Corporation (LIC) Premium,15000.00,DEBIT
+2024-06-20,Public Provident Fund (PPF) Quarterly Deposit,30000.00,DEBIT
+2024-08-25,Health Insurance - Self and Family,12000.00,DEBIT
+2024-10-30,HDFC Home Loan Principal Repayment Installment,18000.00,DEBIT
+2024-10-30,HDFC Home Loan Interest Payment,25000.00,DEBIT
+2024-12-10,Children's Tuition Fee Payment,10000.00,DEBIT
+2025-01-20,ELSS Mutual Fund SIP Top-up,20000.00,DEBIT
+2025-03-20,Additional Health Insurance for Parents,15000.00,DEBIT
+2025-03-31,Final PPF Top-up for 80C limit,60000.00,DEBIT
+2024-05-10,Groceries Bill,4500.00,DEBIT
+2024-07-15,Electricity Bill Payment,2800.00,DEBIT
+2024-09-05,Vacation Travel Expense,35000.00,DEBIT
